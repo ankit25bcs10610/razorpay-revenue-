@@ -14,6 +14,7 @@ from datetime import datetime, timedelta
 
 from revrecover.audit.chain import AuditChain
 from revrecover.detection.scorer import score
+from revrecover.diagnosis.diagnostician import Diagnostician
 from revrecover.domain.models import Case, CaseState
 from revrecover.evaluation.harness import Persona, Response, Scenario, respond
 from revrecover.policy.compliance import (
@@ -69,6 +70,7 @@ def run_case(
     engine: ComplianceEngine,
     audit: AuditChain,
     kill_switch: bool = False,
+    diagnostician: Diagnostician | None = None,
 ) -> CaseResult:
     case, persona = scenario.case, scenario.persona
     result = CaseResult(case=case)
@@ -92,17 +94,37 @@ def run_case(
     if not assessment.pursue:
         return _finish(result, audit, at=now, state=CaseState.ABANDONED,
                        reason=f"not recoverable: {case.error_code}")
-    if assessment.playbook not in _PLAYBOOKS:
+
+    playbook = assessment.playbook
+    if diagnostician is not None:
+        diagnosis = diagnostician.diagnose(case)
+        audit.append(
+            case_id=case.case_id,
+            stage="DIAGNOSE",
+            payload={
+                "source": diagnosis.source,
+                "cause": diagnosis.cause,
+                "failure_class": diagnosis.failure_class,
+                "recovery_odds": diagnosis.recovery_odds,
+                "confidence": diagnosis.confidence,
+                "recommended_playbook": diagnosis.recommended_playbook,
+                "human_summary": diagnosis.human_summary,
+            },
+            at=now,
+        )
+        playbook = diagnosis.recommended_playbook
+
+    if playbook not in _PLAYBOOKS:
         return _finish(result, audit, at=now, state=CaseState.ESCALATED,
                        reason="manual review required")
 
-    case.transition(CaseState.DIAGNOSED, at=now, reason=assessment.playbook)
+    case.transition(CaseState.DIAGNOSED, at=now, reason=playbook)
     case.transition(CaseState.PLANNED, at=now)
 
     contact_history: list[datetime] = []
     last_response: Response | None = None
 
-    for step, planned in enumerate(_PLAYBOOKS[assessment.playbook], start=1):
+    for step, planned in enumerate(_PLAYBOOKS[playbook], start=1):
         action = _P2P_FOLLOW_UP if last_response is Response.PROMISE_TO_PAY else planned
         decision = engine.check(
             action, case=case, contact_history=contact_history, now=now,
