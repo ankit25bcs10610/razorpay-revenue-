@@ -1,0 +1,15 @@
+# Compliance policy — evaluated deterministically before ranking AND at execution time.
+# A non-compliant action can never be executed; learning can never relax these rules.
+contact:
+  quiet_hours: { start: "21:00", end: "09:00", tz: "Asia/Kolkata" }  # RBI collection norms
+  max_attempts_per_case: 3
+  max_contacts_per_customer_per_week: 4
+  min_gap_between_contacts_hours: 24
+
+payments:
+  max_auto_retries: 2
+  never_retry_codes: [CARD_BLOCKED, ACCOUNT_CLOSED, FRAUD_SUSPECTED]
+
+autonomy:
+  hitl_amount_threshold_inr: 50000   # above this, a human approves the action
+  daily_action_budget: 500
