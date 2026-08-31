@@ -30,3 +30,12 @@ def test_verify_tampered_chain_exits_nonzero_and_names_the_record(tmp_path, caps
     make_db(db, tamper=True)
     assert main(["verify", str(db)]) == 1
     assert "BROKEN at record #0" in capsys.readouterr().out
+
+
+def test_ask_subcommand_answers_from_the_ledger(tmp_path, capsys):
+    db = tmp_path / "audit.db"
+    make_db(db)
+    assert main(["ask", str(db), "what happened to case_c1?"]) == 0
+    out = capsys.readouterr().out
+    assert "Timeline for case_c1" in out  # no ANTHROPIC key -> deterministic summary
+    assert "DETECT" in out
