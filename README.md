@@ -92,7 +92,7 @@ uv sync
 
 | Command | What it does |
 |---|---|
-| `make test` | Full test suite — 226 tests incl. property-based invariants, ~2 seconds |
+| `make test` | Full test suite — 247 tests incl. property-based invariants, ~2 seconds |
 | `make demo` | The measured 400-case batch report above |
 | `make sweep` | Robustness sweep: static vs learning across 5 seeds × 400 cases |
 | `make failure-demo` | An issuer outage mid-retry, handled and recovered, printed from the audit chain |
