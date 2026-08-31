@@ -25,6 +25,7 @@ from revrecover.policy.compliance import (
     ComplianceEngine,
     ProposedAction,
 )
+from revrecover.policy.ev import expected_value_inr, rank_interventions
 
 _PLAYBOOKS: dict[str, list[ProposedAction]] = {
     "dunning": [
@@ -112,6 +113,7 @@ def run_case(
                        reason=f"not recoverable: {case.error_code}")
 
     playbook = assessment.playbook
+    diagnosis = None
     if diagnostician is not None:
         diagnosis = diagnostician.diagnose(case)
         audit.append(
@@ -128,7 +130,43 @@ def run_case(
             },
             at=now,
         )
+
+    ranked = rank_interventions(case)
+    if diagnosis is not None:
         playbook = diagnosis.recommended_playbook
+    elif ranked:
+        chosen = next((r for r in ranked if r.chosen), None)
+        playbook = chosen.playbook if chosen else playbook
+
+    if ranked or diagnosis is not None:
+        audit.append(
+            case_id=case.case_id,
+            stage="PLAN",
+            payload={
+                "considered": [
+                    {
+                        "playbook": r.playbook,
+                        "p_recover": r.p_recover,
+                        "cost_inr": r.cost_inr,
+                        "ev_inr": r.ev_inr,
+                        "chosen": r.playbook == playbook,
+                        "rejected_reason": None if r.playbook == playbook else r.rejected_reason or "diagnosis override",
+                    }
+                    for r in ranked
+                ],
+                "diagnosis_override": diagnosis is not None
+                and not any(r.chosen and r.playbook == playbook for r in ranked),
+            },
+            at=now,
+        )
+
+    # The EV gate: never spend money on a case whose best option loses money.
+    if playbook in _PLAYBOOKS:
+        odds = diagnosis.recovery_odds if diagnosis is not None else assessment.p_recover
+        best_ev = expected_value_inr(odds, case.amount_inr, playbook)
+        if best_ev <= 0:
+            return _finish(result, audit, at=now, state=CaseState.ABANDONED,
+                           reason=f"negative expected value (best ₹{best_ev})")
 
     result.playbook = playbook
     if playbook not in _PLAYBOOKS:
