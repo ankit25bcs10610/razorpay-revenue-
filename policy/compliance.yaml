@@ -10,6 +10,10 @@ payments:
   max_auto_retries: 2
   never_retry_codes: [CARD_BLOCKED, ACCOUNT_CLOSED, FRAUD_SUSPECTED]
 
+mandate_retry:                        # RBI e-mandate rules (subscription charges)
+  max_representments: 3
+  require_pre_debit_notification_hours: 24
+
 autonomy:
   hitl_amount_threshold_inr: 50000   # above this, a human approves the action
   daily_action_budget: 500

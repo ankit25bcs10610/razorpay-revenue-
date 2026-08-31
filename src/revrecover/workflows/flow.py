@@ -19,6 +19,7 @@ from revrecover.diagnosis.diagnostician import Diagnostician
 from revrecover.domain.models import Case, CaseState
 from revrecover.evaluation.harness import Persona, Response, Scenario, respond
 from revrecover.policy.compliance import (
+    ActionBudget,
     ActionKind,
     Channel,
     ComplianceEngine,
@@ -73,6 +74,8 @@ def run_case(
     kill_switch: bool = False,
     diagnostician: Diagnostician | None = None,
     channel_chooser: Callable[[Case], Channel] | None = None,
+    budget: ActionBudget | None = None,
+    dry_run: bool = False,
 ) -> CaseResult:
     case, persona = scenario.case, scenario.persona
     result = CaseResult(case=case)
@@ -125,6 +128,8 @@ def run_case(
 
     contact_history: list[datetime] = []
     last_response: Response | None = None
+    retries_executed = 0
+    budget = budget if budget is not None else ActionBudget()
     # The chooser (e.g. the learning bandit) picks the contact channel once
     # per case; it re-ranks among channels only — every action still passes
     # the compliance gate below.
@@ -137,6 +142,8 @@ def run_case(
         decision = engine.check(
             action, case=case, contact_history=contact_history, now=now,
             kill_switch=kill_switch,
+            actions_today=budget.count(now.astimezone(engine.tz)),
+            retries_so_far=retries_executed,
         )
         audit.append(
             case_id=case.case_id,
@@ -147,18 +154,30 @@ def run_case(
                 "channel": action.channel.value if action.channel else None,
                 "allowed": decision.allowed,
                 "failed_checks": decision.failed_checks,
+                **({"dry_run": True} if dry_run else {}),
                 **({"hitl_approved": True} if decision.allowed and decision.requires_approval else {}),
             },
             at=now,
         )
         if not decision.allowed:
-            return _finish(result, audit, at=now, state=CaseState.ESCALATED,
-                           reason=f"compliance blocked: {', '.join(decision.failed_checks)}")
+            if kill_switch:
+                return _finish(result, audit, at=now, state=CaseState.ESCALATED,
+                               reason="compliance blocked: kill_switch")
+            # A blocked step is skipped, not fatal — later steps may still
+            # be compliant (e.g. a retry after the notice has aged 24h).
+            now += timedelta(hours=24)
+            continue
+        if dry_run:
+            now += timedelta(hours=24)
+            continue
 
         if case.state is not CaseState.INTERVENING:
             case.transition(CaseState.INTERVENING, at=now)
         case.record_attempt()
+        budget.record(now.astimezone(engine.tz))
         result.actions_executed.append(action)
+        if action.kind is ActionKind.RETRY:
+            retries_executed += 1
         if action.kind in _CONTACT_KINDS:
             result.contacts_made += 1
             contact_history.append(now)
@@ -196,6 +215,12 @@ def run_case(
         case.transition(CaseState.WAITING, at=now)
         now += timedelta(hours=24)
 
+    if dry_run:
+        return _finish(result, audit, at=now, state=CaseState.ABANDONED,
+                       reason="dry run — no actions executed")
+    if not result.actions_executed:
+        return _finish(result, audit, at=now, state=CaseState.ESCALATED,
+                       reason="all actions compliance-blocked")
     if case.amount_inr >= _ESCALATE_VALUE_FLOOR_INR:
         return _finish(result, audit, at=now, state=CaseState.ESCALATED,
                        reason="high value unresolved after max attempts")

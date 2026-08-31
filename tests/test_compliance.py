@@ -24,10 +24,16 @@ def engine() -> ComplianceEngine:
     return ComplianceEngine.from_yaml(POLICY_PATH)
 
 
-def make_case(*, error_code="INSUFFICIENT_FUNDS", amount_inr=2499, attempts=0) -> Case:
+def make_case(
+    *,
+    error_code="INSUFFICIENT_FUNDS",
+    amount_inr=2499,
+    attempts=0,
+    case_type=CaseType.SUBSCRIPTION_FAILURE,
+) -> Case:
     case = Case(
         case_id="case_0001",
-        case_type=CaseType.SUBSCRIPTION_FAILURE,
+        case_type=case_type,
         customer_id="cust_001",
         amount_inr=amount_inr,
         error_code=error_code,
@@ -55,7 +61,9 @@ def test_message_blocked_during_quiet_hours(engine):
 
 
 def test_retry_is_not_a_customer_contact_so_quiet_hours_do_not_apply(engine):
-    decision = engine.check(RETRY, case=make_case(), contact_history=[], now=NIGHT)
+    # one-off payment: not e-mandate bound, so quiet hours alone decide
+    case = make_case(case_type=CaseType.PAYMENT_FAILURE)
+    decision = engine.check(RETRY, case=case, contact_history=[], now=NIGHT)
     assert decision.allowed is True
 
 
@@ -96,7 +104,8 @@ def test_contact_blocked_within_min_gap_of_previous_contact(engine):
 
 
 def test_high_value_action_passes_but_requires_human_approval(engine):
-    decision = engine.check(RETRY, case=make_case(amount_inr=75000), contact_history=[], now=DAYTIME)
+    case = make_case(amount_inr=75000, case_type=CaseType.PAYMENT_FAILURE)
+    decision = engine.check(RETRY, case=case, contact_history=[], now=DAYTIME)
     assert decision.allowed is True
     assert decision.requires_approval is True
 
