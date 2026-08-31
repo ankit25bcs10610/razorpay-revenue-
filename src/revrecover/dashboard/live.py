@@ -34,12 +34,12 @@ def render_live(*, audit: Any, results: list) -> str:
     cards = "".join(_case_card(r, audit) for r in reversed(results[-50:]))
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
-<meta http-equiv="refresh" content="3">
+<meta http-equiv="refresh" content="10">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>RevRecover — live</title><style>{_CSS}</style></head>
 <body>
 <h1>RevRecover — live pipeline</h1>
-<div class="sub">auto-refreshes every 3s · {badge}</div>
+<div class="sub">auto-refreshes every 10s · {badge}</div>
 <div class="tiles">{tiles}</div>
 <div class="panel"><h2>Latest cases</h2>{cards or '<p class="kv">waiting for webhooks…</p>'}</div>
 </body></html>"""
