@@ -6,4 +6,5 @@ services:
     ports:
       - "8000:8000"
     environment:
-      RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET:-whsec_demo}
+      RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET:?set a webhook secret}
+      ADMIN_TOKEN: ${ADMIN_TOKEN:?set an admin token}

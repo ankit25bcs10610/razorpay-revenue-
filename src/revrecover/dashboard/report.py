@@ -10,9 +10,14 @@ All dynamic content is HTML-escaped.
 from __future__ import annotations
 
 import html
+import os
 from typing import Any
 
 from revrecover.evaluation.batch import BatchReport, BatchRun
+
+# ROI tile assumptions — tunable, documented in docs/PRIORS.md
+ROI_MONTHLY_GMV_INR = int(os.environ.get("ROI_MONTHLY_GMV_INR", 10_000_000))
+ROI_FAILURE_RATE = float(os.environ.get("ROI_FAILURE_RATE", 0.10))
 
 _STATUS = {
     "recovered": ("✓", "good"),
@@ -174,8 +179,8 @@ def render_dashboard(
         ),
         (
             "Merchant ROI estimate",
-            _fmt_inr(int(10_000_000 * 0.10 * report.recovery_rate_pct / 100)) + "/mo",
-            "per ₹1 Cr monthly GMV at a typical 10% failure rate",
+            _fmt_inr(int(ROI_MONTHLY_GMV_INR * ROI_FAILURE_RATE * report.recovery_rate_pct / 100)) + "/mo",
+            f"per ₹1 Cr monthly GMV at a typical {ROI_FAILURE_RATE:.0%} failure rate",
         ),
     ]
     tiles_html = "".join(

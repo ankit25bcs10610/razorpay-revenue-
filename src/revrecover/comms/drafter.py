@@ -10,12 +10,14 @@ message warmer; it can never make one non-compliant.
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass
 
 from revrecover.diagnosis.diagnostician import LLMClient
 from revrecover.domain.models import Case
 from revrecover.policy.compliance import Channel
 
+DEFAULT_MERCHANT = os.environ.get("MERCHANT_NAME", "Acme Store")
 MAX_LENGTH = 480
 _THREAT_PATTERNS = (
     "legal action", "police", "court", "arrest", "blacklist",
@@ -88,7 +90,7 @@ def lint(text: str) -> list[str]:
 
 
 class MessageDrafter:
-    def __init__(self, llm: LLMClient | None, *, merchant: str = "Acme Store"):
+    def __init__(self, llm: LLMClient | None, *, merchant: str = DEFAULT_MERCHANT):
         self._llm = llm
         self._merchant = merchant
 

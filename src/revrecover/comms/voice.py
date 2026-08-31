@@ -14,7 +14,7 @@ import json
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from revrecover.comms.drafter import contains_threats
+from revrecover.comms.drafter import DEFAULT_MERCHANT, contains_threats
 from revrecover.diagnosis.diagnostician import LLMClient
 from revrecover.domain.models import Case
 
@@ -86,7 +86,7 @@ class VoiceOutcome:
 class VoiceRecoveryAgent:
     llm: LLMClient | None
     max_turns: int = 6
-    merchant: str = "Acme Store"
+    merchant: str = DEFAULT_MERCHANT
 
     def call(
         self, case: Case, responder: Callable[[str, int], str]

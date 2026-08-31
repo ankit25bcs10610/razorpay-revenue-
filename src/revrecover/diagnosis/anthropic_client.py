@@ -8,9 +8,10 @@ environment (ANTHROPIC_API_KEY or an `ant auth login` profile).
 
 from __future__ import annotations
 
+import os
 from typing import Any
 
-DEFAULT_MODEL = "claude-opus-5"
+DEFAULT_MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-opus-5")
 
 
 class AnthropicDiagnosisClient:

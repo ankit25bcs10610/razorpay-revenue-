@@ -190,15 +190,19 @@ def run_batch_full(
 
 
 def main() -> None:
+    import os
+
     from revrecover.evaluation.tuning import tune_pursue_floor
 
+    seed = int(os.environ.get("BATCH_SEED", 2026))
+    n = int(os.environ.get("BATCH_N", 400))
     engine = ComplianceEngine.from_yaml(DEFAULT_POLICY)
-    tuned = tune_pursue_floor(seed=2026, engine=engine)
-    static = run_batch(n=400, seed=2026, pursue_floor=tuned.pursue_floor)
-    learned = run_batch(n=400, seed=2026, learning=True, pursue_floor=tuned.pursue_floor)
+    tuned = tune_pursue_floor(seed=seed, engine=engine)
+    static = run_batch(n=n, seed=seed, pursue_floor=tuned.pursue_floor)
+    learned = run_batch(n=n, seed=seed, learning=True, pursue_floor=tuned.pursue_floor)
     curve = " → ".join(f"{q}%" for q in learned.learning_curve_pct)
     lines = [
-        "RevRecover — measured batch run (seed=2026, n=400)",
+        f"RevRecover — measured batch run (seed={seed}, n={n})",
         "=" * 56,
         f"  Pursue floor {tuned.pursue_floor} — tuned on a {tuned.holdout_n}-case holdout "
         f"(net ₹{tuned.holdout_net_inr:,}), never on this batch",

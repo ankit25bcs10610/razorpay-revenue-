@@ -133,8 +133,9 @@ def main() -> None:
     )
     print("RevRecover — LIVE test-mode recovery loop")
     print("=" * 56)
+    amount = int(os.environ.get("LIVE_DEMO_AMOUNT_INR", 99))
     outcome = loop.run(
-        amount_inr=99, description="RevRecover live demo — recovery link",
+        amount_inr=amount, description="RevRecover live demo — recovery link",
         customer_id="cust_live_demo",
     )
     print(f"\n  Pay in a browser: {outcome.short_url}")

@@ -274,7 +274,9 @@ prints one live, including a mid-retry issuer outage.
 ## 10. Webhook gateway
 
 ```bash
-make serve   # RAZORPAY_WEBHOOK_SECRET defaults to whsec_demo
+export RAZORPAY_WEBHOOK_SECRET=whsec_demo ADMIN_TOKEN=admin_demo
+make serve   # no baked-in credentials: unset env vars are replaced by
+             # per-run random secrets, printed at startup
 ```
 
 ```bash
@@ -343,9 +345,17 @@ tampered body → `401`. Signature verification is constant-time HMAC-SHA256.
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `RAZORPAY_WEBHOOK_SECRET` | `whsec_demo` | Webhook HMAC verification secret |
+| `RAZORPAY_WEBHOOK_SECRET` | random per run (printed) | Webhook HMAC verification secret — never baked in |
+| `ADMIN_TOKEN` | random per run (printed) | `POST /admin/process` auth token — never baked in |
 | `GATEWAY_HOST` | `127.0.0.1` | Gateway bind address (`0.0.0.0` in Docker) |
-| `ANTHROPIC_API_KEY` | unset | Enables live LLM diagnosis/drafting; optional |
+| `AUDIT_DB` | `gateway-audit.db` | SQLite audit ledger path for the gateway |
+| `ANTHROPIC_API_KEY` | unset | Enables live LLM diagnosis/drafting/Q&A; optional |
+| `ANTHROPIC_MODEL` | `claude-opus-5` | Model for all LLM integrations |
+| `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` | unset | Test-mode API keys for `make live-demo` (live keys refused) |
+| `MERCHANT_NAME` | `Acme Store` | Sender identity in messages and voice calls |
+| `LIVE_DEMO_AMOUNT_INR` | `99` | Amount for the live payment-link demo |
+| `BATCH_SEED` / `BATCH_N` | `2026` / `400` | Measured-batch parameters (fixed defaults = reproducibility) |
+| `ROI_MONTHLY_GMV_INR` / `ROI_FAILURE_RATE` | `10000000` / `0.10` | Dashboard ROI-tile assumptions |
 
 Business rules live in `policy/compliance.yaml` — one reviewable file for
 quiet hours, caps, e-mandate rules, budgets, and the HITL threshold.
