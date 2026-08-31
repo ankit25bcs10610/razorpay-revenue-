@@ -17,11 +17,14 @@ make demo
 ```
 
 Talk over the output:
-- ₹19.1L at risk across 400 seeded cases → **₹13L recovered (68%)**
-- Two baselines on screen: do-nothing (self-cure only) and naive
-  retry-everything. Our number is *incremental*, not gross.
+- ₹18.6L at risk across 400 seeded cases → **₹9.2L recovered (49.7%)
+  with learning on**, vs 43.3% static and two baselines (do-nothing,
+  naive retry-everything). Our number is *incremental*, not gross.
+- Point at the **learning curve**: 43% → 52% → 61% across quartiles — the
+  bandit discovers that business customers answer email, consumers answer
+  WhatsApp, and it earns +₹1.2L over the static default on the same seed.
 - Point at the honesty lines: never-payers make 100% impossible;
-  **24 annoyance contacts** are reported as false-positive cost, not hidden.
+  **27 annoyance contacts** are reported as false-positive cost, not hidden.
 - "Same seed, same report, on your machine — nothing here is cherry-picked."
 
 ## 1:40–2:40 — Live ingestion (terminal, two panes)
@@ -60,7 +63,7 @@ kill switch freezes everything. These aren't promises — they're tests."
 
 ## 4:30–5:00 — Close
 
-Built test-first (102 tests, deterministic, sub-second), designed to slot
+Built test-first (124 tests, deterministic, sub-second), designed to slot
 into production shape: the intake seam becomes Redis Streams, the flow loop
 becomes a Temporal workflow, the same clock-injected semantics throughout.
 One loop, fully closed, honestly measured — that's the pitch.

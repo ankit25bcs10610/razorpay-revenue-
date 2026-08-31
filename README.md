@@ -8,16 +8,18 @@ intervention, and wins the money back inside hard compliance bounds.
 
 ```
 RevRecover — measured batch run (seed=2026, n=400)
-====================================================
-  Revenue at risk        ₹   1,910,471
-  Recovered by agent     ₹   1,299,512  (68.0%)
-  Baseline: do nothing   ₹     213,788
-  Baseline: naive retry  ₹     832,293
-  Incremental recovery   ₹   1,085,724
-----------------------------------------------------
-  Cases: 255 recovered / 4 escalated / 141 abandoned
-  Contacts sent: 531 (false-positive/annoyance: 24)
-  Audit chain: 2281 records, intact=True
+========================================================
+  Revenue at risk          ₹   1,859,405
+  Recovered (static)       ₹     804,427  (43.3%)
+  Recovered (learning)     ₹     924,921  (49.7%)
+  Baseline: do nothing     ₹     137,659
+  Baseline: naive retry    ₹     684,502
+  Incremental (learning)   ₹     787,262
+--------------------------------------------------------
+  Learning curve (quartile recovery): 43.2% → 52.1% → 61.5% → 47.0%
+  Cases: 218 recovered / 8 escalated / 174 abandoned
+  Contacts sent: 507 (false-positive/annoyance: 27)
+  Audit chain: 2216 records, intact=True
 ```
 
 That report is fully reproducible: `make demo` re-runs the same seeded
@@ -36,8 +38,8 @@ Requires Python ≥ 3.12 and [uv](https://docs.astral.sh/uv/).
 
 ```bash
 uv sync          # install dependencies
-make test        # 102 tests
-make demo        # measured 400-case recovery batch (no API keys needed)
+make test        # 124 tests
+make demo        # measured 400-case batch, static vs learning (no API keys)
 make serve       # webhook gateway on :8000 (Razorpay test-mode webhooks)
 ```
 
@@ -55,6 +57,7 @@ failure the agent silently degrades to its rule engine and keeps working.
 | **Compliant escalation** | `policy/compliance.yaml` + `policy/compliance.py` — quiet hours (RBI collection norms, IST), weekly contact caps, min-gap, never-retry codes, HITL approval above ₹50k, kill switch. Escalating to a human is always allowed |
 | **Audit trail** | `audit/chain.py` — append-only, hash-chained ledger; editing or deleting any record breaks `verify()` at the exact broken record. Every stage (DETECT → DIAGNOSE → DECIDE → ACT → OUTCOME) is recorded with its reasoning |
 | **Honest false-positive cost** | The batch report counts contacts sent to customers who would have paid anyway |
+| **Improves across the batch** | `learning/bandit.py` — Thompson-sampling contextual bandit learns the best contact channel per customer segment; +₹1.2L over the static default on the same seed, quartile learning curve in the report. It re-ranks allowed choices only — every action still passes the compliance gate (tested: `test_chooser_cannot_bypass_the_kill_switch`) |
 
 ## Architecture
 
@@ -71,6 +74,7 @@ detect → diagnose → decide → act → measure → learn
 | Diagnosis | `diagnosis/` | Claude structured-output diagnosis over a PII-free evidence pack, deterministic rule fallback on any failure |
 | Decision + Compliance | `policy/` | Policy-as-code filter — a non-compliant action can never be selected |
 | Execution | `workflows/flow.py` | Bounded playbooks (dunning, smart retry, receivables, checkout) behind an action gate |
+| Learning | `learning/bandit.py` | Per-segment channel bandit; improves recovery across the batch, can never relax a rule |
 | Actuators | `actuators/razorpay_client.py` | Razorpay test-mode Payment Links with idempotent reference IDs |
 | Memory | `domain/models.py` | Case lifecycle state machine; illegal transitions raise |
 | Audit | `audit/chain.py` | Tamper-evident decision ledger |
@@ -121,5 +125,5 @@ second — no network, no API keys, fully deterministic.
   24-hour waits, crash recovery); the flow's semantics are already
   clock-injected so they transfer unchanged
 - **Dashboard** — render audit chains as per-case timeline cards
-- **Learned policy** — Thompson-sampling bandit over playbook variants,
-  gated by offline holdout evaluation (never allowed to relax compliance)
+- **Customer-360 learning** — extend the segment bandit with per-customer
+  channel affinity from contact history

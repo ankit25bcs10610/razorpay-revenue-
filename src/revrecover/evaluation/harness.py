@@ -16,7 +16,7 @@ from enum import Enum
 from zoneinfo import ZoneInfo
 
 from revrecover.domain.models import Case, CaseType
-from revrecover.policy.compliance import ActionKind
+from revrecover.policy.compliance import ActionKind, Channel
 
 BATCH_START = datetime(2026, 8, 31, 14, 0, tzinfo=ZoneInfo("Asia/Kolkata"))
 
@@ -42,6 +42,17 @@ class Response(str, Enum):
 class Scenario:
     case: Case
     persona: Persona
+    segment: str = "consumer"  # "consumer" | "business"
+    preferred_channel: Channel | None = None  # None -> treat any channel as preferred
+
+
+# Channel-preference mix per segment. Nudge-sensitive personas only engage
+# on their preferred channel, so which channel the agent picks carries real
+# money consequences — this is what the learning layer has to discover.
+_CHANNEL_PREFS: dict[str, tuple[list[Channel], list[int]]] = {
+    "business": ([Channel.EMAIL, Channel.SMS, Channel.WHATSAPP], [70, 15, 15]),
+    "consumer": ([Channel.WHATSAPP, Channel.SMS, Channel.EMAIL], [60, 25, 15]),
+}
 
 
 _HARD_CODES = ("CARD_BLOCKED", "ACCOUNT_CLOSED", "FRAUD_SUSPECTED")
@@ -108,24 +119,50 @@ def generate_scenarios(*, n: int, seed: int) -> list[Scenario]:
             error_code=error_code,
             detected_at=BATCH_START,
         )
-        scenarios.append(Scenario(case=case, persona=persona))
+
+        if case_type is CaseType.OVERDUE_INVOICE:
+            segment = "business"
+        else:
+            segment = "business" if rng.random() < 0.25 else "consumer"
+        channels, weights = _CHANNEL_PREFS[segment]
+        preferred = rng.choices(channels, weights=weights)[0]
+
+        scenarios.append(
+            Scenario(case=case, persona=persona, segment=segment, preferred_channel=preferred)
+        )
     return scenarios
 
 
-def respond(persona: Persona, action: ActionKind | None, *, attempt: int) -> Response:
+def respond(
+    persona: Persona,
+    action: ActionKind | None,
+    *,
+    attempt: int,
+    channel: Channel | None = None,
+    preferred_channel: Channel | None = None,
+) -> Response:
     is_contact = action in (ActionKind.MESSAGE, ActionKind.VOICE_CALL)
+    # A nudge only lands on the customer's preferred channel; voice calls
+    # reach everyone. Omitted channel info means on-preference (back-compat).
+    on_channel = (
+        channel is None
+        or preferred_channel is None
+        or channel is Channel.VOICE
+        or channel == preferred_channel
+    )
+    effective_contact = is_contact and on_channel
     match persona:
         case Persona.SELF_CURE:
             return Response.PAID
         case Persona.COOPERATIVE:
             return Response.PAID if action is not None else Response.NO_RESPONSE
         case Persona.NEEDS_REMINDER:
-            return Response.PAID if is_contact and attempt >= 2 else Response.NO_RESPONSE
+            return Response.PAID if effective_contact and attempt >= 2 else Response.NO_RESPONSE
         case Persona.SALARY_CYCLE:
             paid = action is ActionKind.RETRY and attempt >= 2
             return Response.PAID if paid else Response.NO_RESPONSE
         case Persona.PROMISE_BREAKER:
-            if not is_contact:
+            if not effective_contact:
                 return Response.NO_RESPONSE
             if attempt == 1:
                 return Response.PROMISE_TO_PAY

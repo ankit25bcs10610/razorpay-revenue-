@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
+from typing import Callable
 
 from revrecover.audit.chain import AuditChain
 from revrecover.detection.scorer import score
@@ -71,6 +72,7 @@ def run_case(
     audit: AuditChain,
     kill_switch: bool = False,
     diagnostician: Diagnostician | None = None,
+    channel_chooser: Callable[[Case], Channel] | None = None,
 ) -> CaseResult:
     case, persona = scenario.case, scenario.persona
     result = CaseResult(case=case)
@@ -123,9 +125,15 @@ def run_case(
 
     contact_history: list[datetime] = []
     last_response: Response | None = None
+    # The chooser (e.g. the learning bandit) picks the contact channel once
+    # per case; it re-ranks among channels only — every action still passes
+    # the compliance gate below.
+    chosen_channel = channel_chooser(case) if channel_chooser else None
 
     for step, planned in enumerate(_PLAYBOOKS[playbook], start=1):
         action = _P2P_FOLLOW_UP if last_response is Response.PROMISE_TO_PAY else planned
+        if chosen_channel is not None and action.kind is ActionKind.MESSAGE:
+            action = ProposedAction(ActionKind.MESSAGE, chosen_channel)
         decision = engine.check(
             action, case=case, contact_history=contact_history, now=now,
             kill_switch=kill_switch,
@@ -155,7 +163,13 @@ def run_case(
             result.contacts_made += 1
             contact_history.append(now)
 
-        response = respond(persona, action.kind, attempt=step)
+        response = respond(
+            persona,
+            action.kind,
+            attempt=step,
+            channel=action.channel,
+            preferred_channel=scenario.preferred_channel,
+        )
         audit.append(
             case_id=case.case_id,
             stage="ACT",
