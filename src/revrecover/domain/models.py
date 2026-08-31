@@ -72,6 +72,15 @@ class Case:
     state: CaseState = CaseState.DETECTED
     attempts: int = 0
     history: list[CaseEvent] = field(default_factory=list)
+    method: str | None = None  # e.g. "upi", "card"
+    issuer: str | None = None  # e.g. "HDFC"
+
+    @property
+    def cell(self) -> tuple[str, str] | None:
+        """The (method, issuer) monitoring cell, when both are known."""
+        if self.method and self.issuer:
+            return (self.method, self.issuer)
+        return None
 
     def transition(
         self, to_state: CaseState, *, at: datetime, reason: str | None = None

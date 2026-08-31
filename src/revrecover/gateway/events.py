@@ -30,6 +30,8 @@ def case_from_payment_entity(entity: dict, *, at: datetime) -> Case:
         amount_inr=_paise_to_inr(entity["amount"]),
         error_code=_error_code(entity),
         detected_at=at,
+        method=entity.get("method"),
+        issuer=entity.get("bank"),
     )
 
 

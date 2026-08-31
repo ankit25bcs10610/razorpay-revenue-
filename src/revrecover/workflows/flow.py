@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 
 from revrecover.audit.chain import AuditChain
+from revrecover.detection.outages import OutageRegistry
 from revrecover.detection.scorer import PURSUE_FLOOR, score
 from revrecover.diagnosis.diagnostician import Diagnostician
 from revrecover.domain.models import Case, CaseState
@@ -90,6 +91,7 @@ def run_case(
     executor: Callable[[ProposedAction, Case], None] | None = None,
     pursue_floor: float = PURSUE_FLOOR,
     customer360: Customer360 | None = None,
+    outages: OutageRegistry | None = None,
 ) -> CaseResult:
     case, persona = scenario.case, scenario.persona
     result = CaseResult(case=case)
@@ -198,6 +200,22 @@ def run_case(
         action = _P2P_FOLLOW_UP if last_response is Response.PROMISE_TO_PAY else planned
         if chosen_channel is not None and action.kind is ActionKind.MESSAGE:
             action = ProposedAction(ActionKind.MESSAGE, chosen_channel)
+        if (
+            action.kind is ActionKind.RETRY
+            and outages is not None
+            and case.cell is not None
+            and outages.active(case.cell, at=now)
+        ):
+            # A retry into a down issuer is a wasted representment — defer.
+            audit.append(
+                case_id=case.case_id,
+                stage="DEFERRED",
+                payload={"attempt": step, "reason": "issuer_outage",
+                         "cell": list(case.cell)},
+                at=now,
+            )
+            now += timedelta(hours=24)
+            continue
         decision = engine.check(
             action, case=case, contact_history=contact_history, now=now,
             kill_switch=kill_switch,
