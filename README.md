@@ -119,11 +119,23 @@ escalation, stopping rules, and an audit trail."*
 
 ## 4. Architecture
 
-Full design document: [ARCHITECTURE.md](ARCHITECTURE.md). The loop:
+<p align="center">
+  <img src="docs/architecture-3d.svg" alt="Isometric architecture: the detect → diagnose → decide → act → measure → learn pipeline runs over a hash-chained audit ledger; a compliance gate stands between decision and action; the LLM floats above the pipeline and can reason but never touch money; the learning plane feeds re-rankings back into decisions." width="100%">
+</p>
 
-```
-detect → diagnose → decide → act → measure → learn
-```
+Full design document: [ARCHITECTURE.md](ARCHITECTURE.md). The diagram is
+generated code, not a drawing — regenerate it with
+`uv run python scripts/generate_architecture_svg.py`. How to read it:
+
+- **The gray platform** is the hash-chained audit ledger: every stage of
+  every case appends to it, and it rests on SQLite persistence.
+- **The six slabs** are the loop: detect → diagnose → decide → act →
+  measure → learn.
+- **The orange wall** is the compliance gate — the only path from a
+  decision to an action runs through it.
+- **The floating planes** are constrained helpers: the LLM (reasons and
+  drafts, schema-validated, falls back to rules, never touches money) and
+  the learning bandit (re-ranks allowed options, can never relax a rule).
 
 | Layer | Module | Responsibility |
 |---|---|---|
