@@ -47,6 +47,7 @@ class RecoveryService:
     persona_for: Callable[[Case], Persona] = demo_persona
     stream: str = "cases"
     group: str = "recovery"
+    results: list[CaseResult] = field(default_factory=list)
 
     def enqueue(self, case: Case) -> None:
         self.bus.publish(self.stream, case_to_payload(case))
@@ -68,4 +69,10 @@ class RecoveryService:
             )
 
         self.bus.consume(self.stream, group=self.group, handler=handle)
+        self.results.extend(results)
         return results
+
+    def render_dashboard(self) -> str:
+        from revrecover.dashboard.live import render_live
+
+        return render_live(audit=self.audit, results=self.results)

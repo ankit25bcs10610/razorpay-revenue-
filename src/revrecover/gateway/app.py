@@ -13,6 +13,7 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 
 from fastapi import FastAPI, Request, Response
+from fastapi.responses import HTMLResponse
 
 from revrecover.domain.models import Case
 from revrecover.gateway.events import EventLedger, parse_event
@@ -27,10 +28,17 @@ def create_app(
     processor: Callable[[], list] | None = None,
     admin_token: str | None = None,
     clock: Callable[[], datetime] | None = None,
+    dashboard: Callable[[], str] | None = None,
 ) -> FastAPI:
     app = FastAPI(title="RevRecover Webhook Gateway")
     event_ledger = ledger or EventLedger()
     now = clock if clock is not None else lambda: datetime.now(UTC)
+
+    if dashboard is not None:
+
+        @app.get("/dashboard")
+        def live_dashboard() -> HTMLResponse:
+            return HTMLResponse(dashboard())
 
     if processor is not None:
         if not admin_token:
