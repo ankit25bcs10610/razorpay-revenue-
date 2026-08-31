@@ -312,14 +312,14 @@ tampered body → `401`. Signature verification is constant-time HMAC-SHA256.
 ├── policy/compliance.yaml
 ├── infra/              # Dockerfile, docker-compose
 ├── docs/DEMO.md        # timed 5-minute pitch script
-├── tests/              # 206 tests, one file per module
+├── tests/              # 247 tests, one file per module
 └── ARCHITECTURE.md     # full design document
 ```
 
 ## 12. Engineering practices
 
 - **Strict test-driven development** — every module's tests were written
-  and watched fail before its implementation existed. 226 tests run in
+  and watched fail before its implementation existed. 247 tests run in
   about two seconds with no network and no API keys, gated in CI on every
   push (lint + tests + both demos reproduced).
 - **Property-based invariants** (Hypothesis) — laws, not examples: any
