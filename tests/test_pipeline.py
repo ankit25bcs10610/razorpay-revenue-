@@ -55,11 +55,15 @@ ADMIN_TOKEN = "admin_test_token"
 
 
 def make_client(service: RecoveryService) -> TestClient:
+    from datetime import UTC, datetime
+
+    daytime = datetime(2026, 8, 31, 8, 30, tzinfo=UTC)  # 14:00 IST — outside quiet hours
     app = create_app(
         webhook_secret=SECRET,
         intake=service.enqueue,
         processor=service.process_pending,
         admin_token=ADMIN_TOKEN,
+        clock=lambda: daytime,
     )
     return TestClient(app)
 

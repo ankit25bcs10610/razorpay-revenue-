@@ -8,8 +8,8 @@ NOW = datetime(2026, 8, 31, 12, 0, tzinfo=UTC)
 
 def make_db(path, tamper=False):
     chain = SqliteAuditChain(path)
-    chain.append(case_id="c1", stage="DETECT", payload={"amount": 1}, at=NOW)
-    chain.append(case_id="c1", stage="OUTCOME", payload={"ok": True}, at=NOW)
+    chain.append(case_id="case_c1", stage="DETECT", payload={"amount": 1}, at=NOW)
+    chain.append(case_id="case_c1", stage="OUTCOME", payload={"ok": True}, at=NOW)
     if tamper:
         with chain._lock:
             chain._conn.execute("UPDATE audit SET payload = '{\"amount\": 999}' WHERE seq = 0")

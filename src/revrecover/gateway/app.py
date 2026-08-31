@@ -26,9 +26,11 @@ def create_app(
     ledger: EventLedger | None = None,
     processor: Callable[[], list] | None = None,
     admin_token: str | None = None,
+    clock: Callable[[], datetime] | None = None,
 ) -> FastAPI:
     app = FastAPI(title="RevRecover Webhook Gateway")
     event_ledger = ledger or EventLedger()
+    now = clock if clock is not None else lambda: datetime.now(UTC)
 
     if processor is not None:
         if not admin_token:
@@ -58,7 +60,7 @@ def create_app(
         if event_id and not event_ledger.register(event_id):
             return {"status": "duplicate"}
 
-        case = parse_event(await request.json(), at=datetime.now(UTC))
+        case = parse_event(await request.json(), at=now())
         if case is None:
             return {"status": "ignored"}
         # Case-level dedupe shared with the reconciliation poller: the same
