@@ -64,6 +64,14 @@ def _baseline_naive_retry(scenarios) -> int:
     return recovered
 
 
+@dataclass(frozen=True)
+class BatchRun:
+    report: BatchReport
+    audit: AuditChain
+    results: list
+    scenarios: list
+
+
 def run_batch(
     *,
     n: int,
@@ -71,6 +79,16 @@ def run_batch(
     policy_path: Path | str = DEFAULT_POLICY,
     learning: bool = False,
 ) -> BatchReport:
+    return run_batch_full(n=n, seed=seed, policy_path=policy_path, learning=learning).report
+
+
+def run_batch_full(
+    *,
+    n: int,
+    seed: int,
+    policy_path: Path | str = DEFAULT_POLICY,
+    learning: bool = False,
+) -> BatchRun:
     engine = ComplianceEngine.from_yaml(policy_path)
     scenarios = generate_scenarios(n=n, seed=seed)
     audit = AuditChain()
@@ -108,7 +126,7 @@ def run_batch(
         at_risk = sum(r.case.amount_inr for r in chunk) or 1
         curve.append(round(100 * sum(r.recovered_inr for r in chunk) / at_risk, 1))
 
-    return BatchReport(
+    report = BatchReport(
         n_cases=n,
         total_at_risk_inr=total_at_risk,
         recovered_inr=recovered_inr,
@@ -126,6 +144,7 @@ def run_batch(
         learning_enabled=learning,
         learning_curve_pct=tuple(curve),
     )
+    return BatchRun(report=report, audit=audit, results=results, scenarios=scenarios)
 
 
 def main() -> None:

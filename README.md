@@ -38,8 +38,10 @@ Requires Python ≥ 3.12 and [uv](https://docs.astral.sh/uv/).
 
 ```bash
 uv sync          # install dependencies
-make test        # 124 tests
+make test        # 134 tests
 make demo        # measured 400-case batch, static vs learning (no API keys)
+make dashboard   # self-contained dashboard.html: KPIs, learning curve,
+                 #   every case's audit chain as a timeline card
 make serve       # webhook gateway on :8000 (Razorpay test-mode webhooks)
 ```
 
@@ -79,6 +81,7 @@ detect → diagnose → decide → act → measure → learn
 | Memory | `domain/models.py` | Case lifecycle state machine; illegal transitions raise |
 | Audit | `audit/chain.py` | Tamper-evident decision ledger |
 | Evaluation | `evaluation/` | Scenario generator, persona simulator, batch runner with baselines |
+| Dashboard | `dashboard/` | Zero-dependency HTML report: KPI tiles, quartile learning curve, per-case audit timelines |
 
 ## The LLM boundary
 
@@ -124,6 +127,5 @@ second — no network, no API keys, fully deterministic.
 - **Durable workflows** — lift `run_case`'s loop into Temporal (real
   24-hour waits, crash recovery); the flow's semantics are already
   clock-injected so they transfer unchanged
-- **Dashboard** — render audit chains as per-case timeline cards
 - **Customer-360 learning** — extend the segment bandit with per-customer
   channel affinity from contact history

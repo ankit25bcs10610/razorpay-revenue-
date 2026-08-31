@@ -60,10 +60,14 @@ kill switch freezes everything. These aren't promises — they're tests."
   `test_verify_detects_tampered_payload` — edit one historical record, the
   chain breaks at that exact record. "A compliance officer can replay every
   decision, including the roads not taken."
+- `make dashboard` → open `dashboard.html`: KPI tiles, the learning curve,
+  and click open one case card — the full DETECT → DECIDE → ACT → OUTCOME
+  timeline with the compliance checks inline. This is the audit chain a
+  human actually reads.
 
 ## 4:30–5:00 — Close
 
-Built test-first (124 tests, deterministic, sub-second), designed to slot
+Built test-first (134 tests, deterministic, sub-second), designed to slot
 into production shape: the intake seam becomes Redis Streams, the flow loop
 becomes a Temporal workflow, the same clock-injected semantics throughout.
 One loop, fully closed, honestly measured — that's the pitch.
