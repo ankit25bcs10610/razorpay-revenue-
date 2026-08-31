@@ -7,6 +7,7 @@ human is always compliant — the escape hatch must never be blockable.
 
 from __future__ import annotations
 
+import threading
 from dataclasses import dataclass, field
 from datetime import datetime, time, timedelta
 from enum import Enum
@@ -52,13 +53,16 @@ class ActionBudget:
     """Per-day action counter shared across cases (the autonomy budget)."""
 
     _by_day: dict = field(default_factory=dict)
+    _lock: threading.Lock = field(default_factory=threading.Lock)
 
     def record(self, at: datetime) -> None:
-        key = at.date()
-        self._by_day[key] = self._by_day.get(key, 0) + 1
+        with self._lock:
+            key = at.date()
+            self._by_day[key] = self._by_day.get(key, 0) + 1
 
     def count(self, at: datetime) -> int:
-        return self._by_day.get(at.date(), 0)
+        with self._lock:
+            return self._by_day.get(at.date(), 0)
 
 
 @dataclass(frozen=True)

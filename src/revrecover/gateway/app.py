@@ -8,6 +8,7 @@ stops retrying events we have already seen or don't care about.
 
 from __future__ import annotations
 
+import hmac
 from collections.abc import Callable
 from datetime import UTC, datetime
 
@@ -24,14 +25,21 @@ def create_app(
     intake: Callable[[Case], None],
     ledger: EventLedger | None = None,
     processor: Callable[[], list] | None = None,
+    admin_token: str | None = None,
 ) -> FastAPI:
     app = FastAPI(title="RevRecover Webhook Gateway")
     event_ledger = ledger or EventLedger()
 
     if processor is not None:
+        if not admin_token:
+            raise ValueError("a processor endpoint requires an admin_token")
 
         @app.post("/admin/process")
-        def process_pending() -> dict:
+        def process_pending(request: Request, response: Response) -> dict:
+            supplied = request.headers.get("x-admin-token", "")
+            if not hmac.compare_digest(supplied, admin_token):
+                response.status_code = 401
+                return {"status": "unauthorized"}
             results = processor()
             return {
                 "processed": len(results),

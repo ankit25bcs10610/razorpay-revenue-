@@ -73,7 +73,7 @@ kill switch freezes everything. These aren't promises — they're tests."
 
 ## 4:30–5:00 — Close
 
-Built test-first (206 tests, deterministic, ~1s), designed to slot
+Built test-first (226 tests incl. property-based invariants, ~2s), designed to slot
 into production shape: the intake seam becomes Redis Streams, the flow loop
 becomes a Temporal workflow, the same clock-injected semantics throughout.
 One loop, fully closed, honestly measured — that's the pitch.

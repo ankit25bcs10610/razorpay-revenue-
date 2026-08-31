@@ -51,8 +51,16 @@ def service() -> RecoveryService:
     )
 
 
+ADMIN_TOKEN = "admin_test_token"
+
+
 def make_client(service: RecoveryService) -> TestClient:
-    app = create_app(webhook_secret=SECRET, intake=service.enqueue, processor=service.process_pending)
+    app = create_app(
+        webhook_secret=SECRET,
+        intake=service.enqueue,
+        processor=service.process_pending,
+        admin_token=ADMIN_TOKEN,
+    )
     return TestClient(app)
 
 
@@ -74,8 +82,19 @@ def test_admin_process_endpoint_drives_the_worker(service):
     client = make_client(service)
     body = payment_failed("pay_E2E2", "cust_e2e2")
     client.post("/webhooks/razorpay", content=body, headers=signed(body, "e2"))
-    summary = client.post("/admin/process").json()
+    summary = client.post("/admin/process", headers={"x-admin-token": ADMIN_TOKEN}).json()
     assert summary == {"processed": 1, "recovered_inr": 2499}
+
+
+def test_admin_endpoint_rejects_missing_or_wrong_token(service):
+    client = make_client(service)
+    assert client.post("/admin/process").status_code == 401
+    assert client.post("/admin/process", headers={"x-admin-token": "wrong"}).status_code == 401
+
+
+def test_processor_without_an_admin_token_is_refused(service):
+    with pytest.raises(ValueError, match="admin_token"):
+        create_app(webhook_secret=SECRET, intake=service.enqueue, processor=service.process_pending)
 
 
 def test_opt_out_in_one_case_protects_the_customer_in_the_next():

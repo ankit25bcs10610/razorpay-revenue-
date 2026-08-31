@@ -7,6 +7,7 @@ processing idempotent. Amounts arrive in paise and are stored as INR.
 
 from __future__ import annotations
 
+import threading
 from dataclasses import dataclass, field
 from datetime import datetime
 
@@ -68,9 +69,12 @@ def parse_event(payload: dict, *, at: datetime) -> Case | None:
 @dataclass
 class EventLedger:
     _seen: set[str] = field(default_factory=set)
+    _lock: threading.Lock = field(default_factory=threading.Lock)
 
     def register(self, event_id: str) -> bool:
-        if event_id in self._seen:
-            return False
-        self._seen.add(event_id)
-        return True
+        # check-then-add must be atomic: gateway endpoints run in a threadpool
+        with self._lock:
+            if event_id in self._seen:
+                return False
+            self._seen.add(event_id)
+            return True

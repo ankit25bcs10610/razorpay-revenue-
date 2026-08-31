@@ -1,5 +1,7 @@
 # RevRecover — AI Revenue Recovery Agent
 
+[![CI](https://github.com/ankit25bcs10610/razorpay-revenue-/actions/workflows/ci.yml/badge.svg)](https://github.com/ankit25bcs10610/razorpay-revenue-/actions/workflows/ci.yml)
+
 **Razorpay AI Buildathon · Track 3: AI Revenue Recovery**
 
 An autonomous, auditable agent that detects revenue slipping away — failed
@@ -90,11 +92,16 @@ uv sync
 
 | Command | What it does |
 |---|---|
-| `make test` | Full test suite — 206 tests, ~1 second |
+| `make test` | Full test suite — 226 tests incl. property-based invariants, ~2 seconds |
 | `make demo` | The measured 400-case batch report above |
+| `make sweep` | Robustness sweep: static vs learning across 5 seeds × 400 cases |
 | `make failure-demo` | An issuer outage mid-retry, handled and recovered, printed from the audit chain |
 | `make dashboard` | Generates `dashboard.html` — KPI tiles, learning curve, every case's audit timeline |
 | `make serve` | Webhook gateway on `:8000` for Razorpay test-mode events |
+
+Verify any persisted audit ledger from the command line:
+`uv run python -m revrecover.audit verify <audit.db>` — exit 0 if intact,
+exit 1 naming the exact broken record otherwise.
 
 Containerized gateway: `docker compose -f infra/docker-compose.yml up gateway`.
 
@@ -139,7 +146,7 @@ generated code, not a drawing — regenerate it with
 
 | Layer | Module | Responsibility |
 |---|---|---|
-| Ingestion | `gateway/` | FastAPI webhook gateway (HMAC verification, dedupe), reconciliation poller (the API is the source of truth; webhooks are notifications), event bus with consumer-group semantics |
+| Ingestion | `gateway/` | FastAPI webhook gateway (HMAC verification, dedupe), reconciliation poller (the API is the source of truth; webhooks are notifications), event bus with consumer-group semantics, and `RecoveryService` — the wired webhook → bus → worker pipeline sharing one SQLite audit chain, Customer-360, and daily budget |
 | Detection | `detection/` | Per-event recoverability scoring (hard failures are never pursued) and a dual-EWMA degradation monitor per method × issuer cell |
 | Diagnosis | `diagnosis/` | Claude structured-output diagnosis over a PII-free evidence pack; deterministic rule fallback on any failure |
 | Decision | `policy/` | Expected-value ranking of interventions, hard-filtered by policy-as-code compliance |
@@ -228,6 +235,9 @@ the harness is built first and frozen:
 - **Holdout protocol** — thresholds are tuned on a 100-case slice from a
   derived seed; the measured batch is never used for tuning.
 - **Reproducibility** — same seed, byte-identical report, on any machine.
+- **Robustness sweep** — `make sweep` re-runs both batches across five
+  seeds. The learning lift holds on *every* seed, not a lucky one:
+  static mean 47.4% (42.6–52.7%) vs learning mean 50.8% (46.0–56.2%).
 
 ## 9. The audit trail
 
@@ -295,11 +305,19 @@ tampered body → `401`. Signature verification is constant-time HMAC-SHA256.
 ## 12. Engineering practices
 
 - **Strict test-driven development** — every module's tests were written
-  and watched fail before its implementation existed. 206 tests run in
-  about one second with no network and no API keys.
+  and watched fail before its implementation existed. 226 tests run in
+  about two seconds with no network and no API keys, gated in CI on every
+  push (lint + tests + both demos reproduced).
+- **Property-based invariants** (Hypothesis) — laws, not examples: any
+  append history verifies and any tamper is caught; the state machine
+  keeps a connected history and terminal states absorb; compliance hard
+  limits hold for arbitrary inputs; voice calls stay bounded for
+  arbitrary customer utterances.
 - **Adversarial testing at every trust boundary** — tampered audit records,
   hallucinated LLM output, threatening drafts, runaway dialogue, replayed
-  webhooks, forged signatures, exhausted budgets.
+  webhooks, forged signatures, exhausted budgets, and races on shared
+  stores (dedupe ledger and budget are lock-guarded; the SQLite chain is
+  safe under FastAPI's threadpool — a defect the end-to-end test caught).
 - **Injectable side effects** — clocks, sleepers, RNG, transports, and LLM
   clients are all injected, which is why the suite is fast and the
   production swaps (Temporal, Redis, Postgres, telephony) are interface
