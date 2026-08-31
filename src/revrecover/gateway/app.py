@@ -42,6 +42,10 @@ def create_app(
         case = parse_event(await request.json(), at=datetime.now(timezone.utc))
         if case is None:
             return {"status": "ignored"}
+        # Case-level dedupe shared with the reconciliation poller: the same
+        # payment seen on both paths is processed exactly once.
+        if not event_ledger.register(case.case_id):
+            return {"status": "duplicate"}
 
         intake(case)
         return {"status": "accepted", "case_id": case.case_id}

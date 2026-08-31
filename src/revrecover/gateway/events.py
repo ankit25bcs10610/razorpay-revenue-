@@ -21,20 +21,23 @@ def _error_code(entity: dict) -> str:
     return str(entity.get("error_reason") or entity.get("error_code") or "UNKNOWN").upper()
 
 
+def case_from_payment_entity(entity: dict, *, at: datetime) -> Case:
+    return Case(
+        case_id=f"case_{entity['id']}",
+        case_type=CaseType.PAYMENT_FAILURE,
+        customer_id=entity.get("customer_id", "unknown"),
+        amount_inr=_paise_to_inr(entity["amount"]),
+        error_code=_error_code(entity),
+        detected_at=at,
+    )
+
+
 def parse_event(payload: dict, *, at: datetime) -> Case | None:
     event = payload.get("event")
     entities = payload.get("payload", {})
 
     if event == "payment.failed":
-        entity = entities["payment"]["entity"]
-        return Case(
-            case_id=f"case_{entity['id']}",
-            case_type=CaseType.PAYMENT_FAILURE,
-            customer_id=entity.get("customer_id", "unknown"),
-            amount_inr=_paise_to_inr(entity["amount"]),
-            error_code=_error_code(entity),
-            detected_at=at,
-        )
+        return case_from_payment_entity(entities["payment"]["entity"], at=at)
 
     if event == "subscription.halted":
         subscription = entities["subscription"]["entity"]
