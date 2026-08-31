@@ -58,6 +58,14 @@ _ESCALATE_VALUE_FLOOR_INR = 10_000
 _CONTACT_KINDS = (ActionKind.MESSAGE, ActionKind.VOICE_CALL)
 
 
+class TransientActuatorError(Exception):
+    """A side-effecting call failed transiently (gateway 5xx, issuer down).
+
+    The flow absorbs it: audit the failure, back off, move to the next
+    step. It must never crash a case or silently count as customer touch.
+    """
+
+
 @dataclass
 class CaseResult:
     case: Case
@@ -76,6 +84,7 @@ def run_case(
     channel_chooser: Callable[[Case], Channel] | None = None,
     budget: ActionBudget | None = None,
     dry_run: bool = False,
+    executor: Callable[[ProposedAction, Case], None] | None = None,
 ) -> CaseResult:
     case, persona = scenario.case, scenario.persona
     result = CaseResult(case=case)
@@ -129,6 +138,7 @@ def run_case(
     contact_history: list[datetime] = []
     last_response: Response | None = None
     retries_executed = 0
+    actuator_failures = 0
     budget = budget if budget is not None else ActionBudget()
     # The chooser (e.g. the learning bandit) picks the contact channel once
     # per case; it re-ranks among channels only — every action still passes
@@ -170,6 +180,19 @@ def run_case(
         if dry_run:
             now += timedelta(hours=24)
             continue
+        if executor is not None:
+            try:
+                executor(action, case)
+            except TransientActuatorError as exc:
+                actuator_failures += 1
+                audit.append(
+                    case_id=case.case_id,
+                    stage="ACT_FAILED",
+                    payload={"attempt": step, "action": action.kind.value, "error": str(exc)},
+                    at=now,
+                )
+                now += timedelta(hours=24)  # back off, re-plan next step
+                continue
 
         if case.state is not CaseState.INTERVENING:
             case.transition(CaseState.INTERVENING, at=now)
@@ -219,8 +242,12 @@ def run_case(
         return _finish(result, audit, at=now, state=CaseState.ABANDONED,
                        reason="dry run — no actions executed")
     if not result.actions_executed:
-        return _finish(result, audit, at=now, state=CaseState.ESCALATED,
-                       reason="all actions compliance-blocked")
+        reason = (
+            "actuator failures exhausted playbook"
+            if actuator_failures
+            else "all actions compliance-blocked"
+        )
+        return _finish(result, audit, at=now, state=CaseState.ESCALATED, reason=reason)
     if case.amount_inr >= _ESCALATE_VALUE_FLOOR_INR:
         return _finish(result, audit, at=now, state=CaseState.ESCALATED,
                        reason="high value unresolved after max attempts")

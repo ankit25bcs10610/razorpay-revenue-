@@ -1,4 +1,4 @@
-.PHONY: test demo serve dashboard
+.PHONY: test demo serve dashboard failure-demo
 
 test:
 	uv run pytest
@@ -11,3 +11,6 @@ serve:
 
 dashboard:
 	uv run python -m revrecover.dashboard
+
+failure-demo:
+	uv run python -m revrecover.evaluation.failure_demo
