@@ -45,7 +45,7 @@ _CASE_TYPE_PLAYBOOKS: dict[CaseType, tuple[float, str]] = {
 }
 
 
-def score(case: Case) -> Assessment:
+def score(case: Case, *, pursue_floor: float = PURSUE_FLOOR) -> Assessment:
     if case.error_code in _HARD_CODES:
         return Assessment(
             p_recover=0.0, failure_class=FailureClass.HARD, playbook="none", pursue=False
@@ -60,5 +60,5 @@ def score(case: Case) -> Assessment:
         p_recover=p_recover,
         failure_class=FailureClass.SOFT,
         playbook=playbook,
-        pursue=p_recover >= PURSUE_FLOOR,
+        pursue=p_recover >= pursue_floor,
     )

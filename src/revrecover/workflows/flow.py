@@ -14,7 +14,7 @@ from datetime import datetime, timedelta
 from typing import Callable
 
 from revrecover.audit.chain import AuditChain
-from revrecover.detection.scorer import score
+from revrecover.detection.scorer import PURSUE_FLOOR, score
 from revrecover.diagnosis.diagnostician import Diagnostician
 from revrecover.domain.models import Case, CaseState
 from revrecover.evaluation.harness import Persona, Response, Scenario, respond
@@ -86,12 +86,13 @@ def run_case(
     budget: ActionBudget | None = None,
     dry_run: bool = False,
     executor: Callable[[ProposedAction, Case], None] | None = None,
+    pursue_floor: float = PURSUE_FLOOR,
 ) -> CaseResult:
     case, persona = scenario.case, scenario.persona
     result = CaseResult(case=case)
     now = case.detected_at
 
-    assessment = score(case)
+    assessment = score(case, pursue_floor=pursue_floor)
     audit.append(
         case_id=case.case_id,
         stage="DETECT",
