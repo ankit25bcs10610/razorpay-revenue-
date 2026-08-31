@@ -72,6 +72,7 @@ class CaseResult:
     recovered_inr: int = 0
     contacts_made: int = 0
     actions_executed: list[ProposedAction] = field(default_factory=list)
+    playbook: str = "none"
 
 
 def run_case(
@@ -128,6 +129,7 @@ def run_case(
         )
         playbook = diagnosis.recommended_playbook
 
+    result.playbook = playbook
     if playbook not in _PLAYBOOKS:
         return _finish(result, audit, at=now, state=CaseState.ESCALATED,
                        reason="manual review required")

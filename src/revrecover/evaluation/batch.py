@@ -48,6 +48,11 @@ class BatchReport:
     audit_records: int
     learning_enabled: bool
     learning_curve_pct: tuple[float, float, float, float]
+    recovered_by_playbook: dict
+    stop_reasons: dict
+    actions_per_recovery: float
+    p50_days_to_recovery: float
+    p95_days_to_recovery: float
 
 
 def _baseline_do_nothing(scenarios) -> int:
@@ -119,6 +124,28 @@ def run_batch_full(
     )
     intact, _ = audit.verify()
 
+    recovered_results = [r for r in results if r.recovered_inr > 0]
+    by_playbook: dict[str, int] = {}
+    for r in recovered_results:
+        by_playbook[r.playbook] = by_playbook.get(r.playbook, 0) + r.recovered_inr
+    stop_reasons: dict[str, int] = {}
+    for r in results:
+        reason = r.case.history[-1].reason or "unknown"
+        if reason.startswith("not recoverable"):
+            reason = "not recoverable"
+        stop_reasons[reason] = stop_reasons.get(reason, 0) + 1
+    actions_per_recovery = (
+        round(sum(len(r.actions_executed) for r in recovered_results) / len(recovered_results), 2)
+        if recovered_results
+        else 0.0
+    )
+    days = sorted(
+        (r.case.history[-1].at - r.case.detected_at).total_seconds() / 86400
+        for r in recovered_results
+    )
+    p50 = round(days[int(0.5 * (len(days) - 1))], 1) if days else 0.0
+    p95 = round(days[int(0.95 * (len(days) - 1))], 1) if days else 0.0
+
     quartile = max(1, n // 4)
     curve = []
     for i in range(4):
@@ -143,6 +170,11 @@ def run_batch_full(
         audit_records=len(audit),
         learning_enabled=learning,
         learning_curve_pct=tuple(curve),
+        recovered_by_playbook=by_playbook,
+        stop_reasons=stop_reasons,
+        actions_per_recovery=actions_per_recovery,
+        p50_days_to_recovery=p50,
+        p95_days_to_recovery=p95,
     )
     return BatchRun(report=report, audit=audit, results=results, scenarios=scenarios)
 
@@ -168,6 +200,14 @@ def main() -> None:
         f"(false-positive/annoyance: {learned.annoyance_contacts})",
         f"  Audit chain: {learned.audit_records} records, "
         f"intact={learned.audit_intact}",
+        "-" * 56,
+        "  Recovered by playbook: "
+        + ", ".join(f"{k} ₹{v:,}" for k, v in sorted(learned.recovered_by_playbook.items())),
+        "  Stop reasons: "
+        + ", ".join(f"{k} ×{v}" for k, v in sorted(learned.stop_reasons.items())),
+        f"  Actions per recovery: {learned.actions_per_recovery} · "
+        f"time-to-recovery P50 {learned.p50_days_to_recovery}d / "
+        f"P95 {learned.p95_days_to_recovery}d",
     ]
     print("\n".join(lines))
 
