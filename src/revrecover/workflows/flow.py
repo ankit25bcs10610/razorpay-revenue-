@@ -18,6 +18,7 @@ from revrecover.detection.scorer import PURSUE_FLOOR, score
 from revrecover.diagnosis.diagnostician import Diagnostician
 from revrecover.domain.models import Case, CaseState
 from revrecover.evaluation.harness import Persona, Response, Scenario, respond
+from revrecover.memory.customer360 import Customer360
 from revrecover.policy.compliance import (
     ActionBudget,
     ActionKind,
@@ -88,6 +89,7 @@ def run_case(
     dry_run: bool = False,
     executor: Callable[[ProposedAction, Case], None] | None = None,
     pursue_floor: float = PURSUE_FLOOR,
+    customer360: Customer360 | None = None,
 ) -> CaseResult:
     case, persona = scenario.case, scenario.persona
     result = CaseResult(case=case)
@@ -111,6 +113,9 @@ def run_case(
     if not assessment.pursue:
         return _finish(result, audit, at=now, state=CaseState.ABANDONED,
                        reason=f"not recoverable: {case.error_code}")
+    if customer360 is not None and customer360.has_opted_out(case.customer_id):
+        return _finish(result, audit, at=now, state=CaseState.ABANDONED,
+                       reason="customer previously opted out")
 
     playbook = assessment.playbook
     diagnosis = None
@@ -176,8 +181,11 @@ def run_case(
     case.transition(CaseState.DIAGNOSED, at=now, reason=playbook)
     case.transition(CaseState.PLANNED, at=now)
 
-    contact_history: list[datetime] = []
+    contact_history: list[datetime] = (
+        customer360.contacts_for(case.customer_id) if customer360 is not None else []
+    )
     last_response: Response | None = None
+    last_contact_channel: Channel | None = None
     retries_executed = 0
     actuator_failures = 0
     budget = budget if budget is not None else ActionBudget()
@@ -245,6 +253,9 @@ def run_case(
         if action.kind in _CONTACT_KINDS:
             result.contacts_made += 1
             contact_history.append(now)
+            last_contact_channel = action.channel
+            if customer360 is not None:
+                customer360.record_contact(case.customer_id, now)
 
         response = respond(
             persona,
@@ -262,9 +273,13 @@ def run_case(
 
         if response is Response.PAID:
             result.recovered_inr = case.amount_inr
+            if customer360 is not None:
+                customer360.record_recovery(case.customer_id, last_contact_channel)
             return _finish(result, audit, at=now, state=CaseState.RECOVERED,
                            reason="payment captured")
         if response is Response.OPT_OUT:
+            if customer360 is not None:
+                customer360.record_opt_out(case.customer_id)
             return _finish(result, audit, at=now, state=CaseState.ABANDONED,
                            reason="customer opted out")
         if response is Response.PROMISE_TO_PAY:
