@@ -86,6 +86,9 @@ class RazorpayClient:
     def fetch_payment(self, payment_id: str) -> dict:
         return self._request("GET", f"/v1/payments/{payment_id}")
 
+    def fetch_payment_link(self, link_id: str) -> dict:
+        return self._request("GET", f"/v1/payment_links/{link_id}")
+
     def list_payments(self, *, from_ts: int, to_ts: int, count: int = 100) -> list[dict]:
         data = self._request(
             "GET", "/v1/payments", params={"from": from_ts, "to": to_ts, "count": count}
