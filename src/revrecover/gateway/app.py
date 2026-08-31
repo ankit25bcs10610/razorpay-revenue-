@@ -23,9 +23,20 @@ def create_app(
     webhook_secret: str,
     intake: Callable[[Case], None],
     ledger: EventLedger | None = None,
+    processor: Callable[[], list] | None = None,
 ) -> FastAPI:
     app = FastAPI(title="RevRecover Webhook Gateway")
     event_ledger = ledger or EventLedger()
+
+    if processor is not None:
+
+        @app.post("/admin/process")
+        def process_pending() -> dict:
+            results = processor()
+            return {
+                "processed": len(results),
+                "recovered_inr": sum(r.recovered_inr for r in results),
+            }
 
     @app.post("/webhooks/razorpay")
     async def razorpay_webhook(request: Request, response: Response) -> dict:

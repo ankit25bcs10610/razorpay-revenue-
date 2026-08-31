@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import threading
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -21,7 +22,11 @@ from revrecover.audit.chain import GENESIS_HASH, AuditRecord, _body_digest
 
 class SqliteAuditChain:
     def __init__(self, path: str | Path):
-        self._conn = sqlite3.connect(str(path))
+        # One connection guarded by a lock: append must be atomic anyway
+        # (read last hash + insert), and callers may live in a threadpool
+        # (e.g. FastAPI sync endpoints).
+        self._lock = threading.Lock()
+        self._conn = sqlite3.connect(str(path), check_same_thread=False)
         self._conn.execute(
             """CREATE TABLE IF NOT EXISTS audit (
                 seq INTEGER PRIMARY KEY,
@@ -56,8 +61,9 @@ class SqliteAuditChain:
     def append(
         self, *, case_id: str, stage: str, payload: dict[str, Any], at: datetime
     ) -> AuditRecord:
+      with self._lock:
         record = AuditRecord(
-            seq=len(self),
+            seq=self._count(),
             case_id=case_id,
             stage=stage,
             payload=payload,
@@ -81,6 +87,7 @@ class SqliteAuditChain:
         return record
 
     def verify(self) -> tuple[bool, int | None]:
+      with self._lock:
         prev_hash = GENESIS_HASH
         for position, row in enumerate(
             self._conn.execute("SELECT * FROM audit ORDER BY seq")
@@ -96,21 +103,28 @@ class SqliteAuditChain:
         return True, None
 
     def records_for_case(self, case_id: str) -> list[AuditRecord]:
+      with self._lock:
         rows = self._conn.execute(
             "SELECT * FROM audit WHERE case_id = ? ORDER BY seq", (case_id,)
         )
         return [self._row_to_record(row) for row in rows]
 
-    def __len__(self) -> int:
+    def _count(self) -> int:
         return self._conn.execute("SELECT COUNT(*) FROM audit").fetchone()[0]
 
+    def __len__(self) -> int:
+        with self._lock:
+            return self._count()
+
     def close(self) -> None:
-        self._conn.close()
+        with self._lock:
+            self._conn.close()
 
 
 class SqliteCaseStore:
     def __init__(self, path: str | Path):
-        self._conn = sqlite3.connect(str(path))
+        self._lock = threading.Lock()
+        self._conn = sqlite3.connect(str(path), check_same_thread=False)
         self._conn.execute(
             """CREATE TABLE IF NOT EXISTS cases (
                 case_id TEXT PRIMARY KEY,
@@ -126,6 +140,7 @@ class SqliteCaseStore:
         self._conn.commit()
 
     def save(self, case) -> None:
+      with self._lock:
         self._conn.execute(
             "INSERT OR REPLACE INTO cases VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             (
@@ -142,6 +157,7 @@ class SqliteCaseStore:
         self._conn.commit()
 
     def get(self, case_id: str) -> dict | None:
+      with self._lock:
         row = self._conn.execute(
             "SELECT * FROM cases WHERE case_id = ?", (case_id,)
         ).fetchone()
@@ -154,7 +170,9 @@ class SqliteCaseStore:
         return dict(zip(keys, row, strict=True))
 
     def count(self) -> int:
-        return self._conn.execute("SELECT COUNT(*) FROM cases").fetchone()[0]
+        with self._lock:
+            return self._conn.execute("SELECT COUNT(*) FROM cases").fetchone()[0]
 
     def close(self) -> None:
-        self._conn.close()
+        with self._lock:
+            self._conn.close()
