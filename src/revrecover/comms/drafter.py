@@ -68,6 +68,11 @@ class Draft:
     source: str  # "llm" | "template"
 
 
+def contains_threats(text: str) -> bool:
+    lowered = text.lower()
+    return any(pattern in lowered for pattern in _THREAT_PATTERNS)
+
+
 def lint(text: str) -> list[str]:
     violations: list[str] = []
     lowered = text.lower()
