@@ -1,10 +1,10 @@
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from revrecover.diagnosis.diagnostician import Diagnostician
 from revrecover.domain.models import Case, CaseType
 
-NOW = datetime(2026, 8, 31, 12, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 8, 31, 12, 0, tzinfo=UTC)
 
 
 def make_case() -> Case:

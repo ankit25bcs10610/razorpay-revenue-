@@ -1,10 +1,10 @@
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from revrecover.comms.voice import VoiceRecoveryAgent
 from revrecover.domain.models import Case, CaseType
 
-NOW = datetime(2026, 8, 31, 12, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 8, 31, 12, 0, tzinfo=UTC)
 
 
 def make_case() -> Case:
@@ -69,7 +69,7 @@ def test_unresponsive_call_is_capped_at_max_turns():
 
 def test_threatening_llm_line_is_replaced_by_script():
     llm = ScriptedLLM("Pay now or we will take legal action and call the police!")
-    outcome = VoiceRecoveryAgent(llm, max_turns=2).call(make_case(), lambda l, t: "hmm")
+    outcome = VoiceRecoveryAgent(llm, max_turns=2).call(make_case(), lambda line, turn: "hmm")
     for turn in outcome.transcript:
         if turn.speaker == "agent":
             assert "legal action" not in turn.text.lower()

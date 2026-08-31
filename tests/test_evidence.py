@@ -1,9 +1,9 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from revrecover.diagnosis.evidence import build_evidence_pack
 from revrecover.domain.models import Case, CaseType
 
-NOW = datetime(2026, 8, 31, 12, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 8, 31, 12, 0, tzinfo=UTC)
 
 
 def make_case(error_code="INSUFFICIENT_FUNDS", case_type=CaseType.SUBSCRIPTION_FAILURE) -> Case:

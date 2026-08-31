@@ -1,9 +1,9 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from revrecover.domain.models import CaseType
 from revrecover.gateway.events import EventLedger, parse_event
 
-NOW = datetime(2026, 8, 31, 12, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 8, 31, 12, 0, tzinfo=UTC)
 
 PAYMENT_FAILED = {
     "event": "payment.failed",

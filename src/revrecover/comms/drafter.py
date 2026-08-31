@@ -10,7 +10,6 @@ message warmer; it can never make one non-compliant.
 from __future__ import annotations
 
 import json
-import re
 from dataclasses import dataclass
 
 from revrecover.diagnosis.diagnostician import LLMClient

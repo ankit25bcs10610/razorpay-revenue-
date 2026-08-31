@@ -109,7 +109,9 @@ def run_batch_full(
         chooser = None
         if bandit is not None:
             arm = bandit.choose(scenario.segment)
-            chooser = lambda case, chosen=Channel(arm): chosen
+
+            def chooser(case, chosen=Channel(arm)):  # noqa: B008 - bound at choice time
+                return chosen
         floor_kwargs = {} if pursue_floor is None else {"pursue_floor": pursue_floor}
         result = run_case(
             scenario, engine=engine, audit=audit, channel_chooser=chooser, **floor_kwargs
@@ -127,7 +129,7 @@ def run_batch_full(
     abandoned = sum(1 for r in results if r.case.state.value == "abandoned")
     annoyance = sum(
         r.contacts_made
-        for r, s in zip(results, scenarios)
+        for r, s in zip(results, scenarios, strict=True)
         if s.persona is Persona.SELF_CURE
     )
     intact, _ = audit.verify()

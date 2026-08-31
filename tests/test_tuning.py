@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -12,7 +12,7 @@ from revrecover.policy.compliance import ComplianceEngine
 from revrecover.workflows.flow import run_case
 
 POLICY_PATH = Path(__file__).parent.parent / "policy" / "compliance.yaml"
-NOW = datetime(2026, 8, 31, 12, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 8, 31, 12, 0, tzinfo=UTC)
 
 
 @pytest.fixture
@@ -58,7 +58,6 @@ def test_tuner_holdout_differs_from_the_measured_batch(engine):
     tuned = tune_pursue_floor(seed=42, engine=engine, candidates=(0.2,))
     from revrecover.evaluation.harness import generate_scenarios
 
-    measured_ids = {s.case.case_id for s in generate_scenarios(n=100, seed=42)}
     # holdout uses a derived seed: same ids would mean tuning on the
     # measured batch, which the protocol forbids
     assert tuned.holdout_error_codes != tuple(

@@ -8,9 +8,9 @@ so a payment seen on either path is processed exactly once.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Callable
 
 from revrecover.actuators.razorpay_client import RazorpayClient
 from revrecover.domain.models import Case

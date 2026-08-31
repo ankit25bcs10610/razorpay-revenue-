@@ -1,8 +1,8 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-from revrecover.audit.chain import AuditChain, GENESIS_HASH
+from revrecover.audit.chain import GENESIS_HASH, AuditChain
 
-NOW = datetime(2026, 8, 31, 12, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 8, 31, 12, 0, tzinfo=UTC)
 
 
 def test_first_record_links_to_genesis_hash():

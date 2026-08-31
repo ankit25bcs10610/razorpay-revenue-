@@ -9,15 +9,15 @@ loop body becomes a Temporal workflow with real timers; the simulated clock
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Callable
 
 from revrecover.audit.chain import AuditChain
 from revrecover.detection.scorer import PURSUE_FLOOR, score
 from revrecover.diagnosis.diagnostician import Diagnostician
 from revrecover.domain.models import Case, CaseState
-from revrecover.evaluation.harness import Persona, Response, Scenario, respond
+from revrecover.evaluation.harness import Response, Scenario, respond
 from revrecover.memory.customer360 import Customer360
 from revrecover.policy.compliance import (
     ActionBudget,

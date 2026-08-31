@@ -1,5 +1,4 @@
-import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import httpx
 
@@ -7,7 +6,7 @@ from revrecover.actuators.razorpay_client import RazorpayClient
 from revrecover.gateway.events import EventLedger
 from revrecover.gateway.poller import ReconciliationPoller
 
-NOW = datetime(2026, 8, 31, 12, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 8, 31, 12, 0, tzinfo=UTC)
 
 PAYMENTS_PAGE = {
     "count": 3,

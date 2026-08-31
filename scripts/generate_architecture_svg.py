@@ -105,7 +105,7 @@ def main() -> None:
     # ---- flow arrows along the slab tops ----
     flow_z = 0.55
     xs = [0.0, 3.6, 7.2, 10.8, 15.8, 19.4]
-    for left, right in zip(xs, xs[1:]):
+    for left, right in zip(xs, xs[1:], strict=False):
         parts.append(arrow(iso(left + 2.68, 1.35, flow_z), iso(right - 0.12, 1.35, flow_z), color=INK, width=2.4))
 
     # ---- LLM plane (floats above diagnosis) ----

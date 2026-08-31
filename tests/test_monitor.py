@@ -1,9 +1,9 @@
 import random
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from revrecover.detection.monitor import SuccessRateMonitor
 
-T0 = datetime(2026, 8, 31, 12, 0, tzinfo=timezone.utc)
+T0 = datetime(2026, 8, 31, 12, 0, tzinfo=UTC)
 UPI_HDFC = ("upi", "HDFC")
 CARD_ICICI = ("card", "ICICI")
 

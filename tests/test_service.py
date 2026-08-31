@@ -1,10 +1,10 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from revrecover.audit.chain import AuditChain
 from revrecover.domain.models import Case, CaseType
 from revrecover.gateway.service import DemoIntake
 
-NOW = datetime(2026, 8, 31, 12, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 8, 31, 12, 0, tzinfo=UTC)
 
 
 def make_case(error_code="INSUFFICIENT_FUNDS") -> Case:

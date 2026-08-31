@@ -1,14 +1,13 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
 
-from revrecover.audit.chain import AuditChain
 from revrecover.dashboard.report import render_dashboard
 from revrecover.evaluation.batch import run_batch, run_batch_full
 
 POLICY_PATH = Path(__file__).parent.parent / "policy" / "compliance.yaml"
-NOW = datetime(2026, 8, 31, 12, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 8, 31, 12, 0, tzinfo=UTC)
 
 
 @pytest.fixture(scope="module")

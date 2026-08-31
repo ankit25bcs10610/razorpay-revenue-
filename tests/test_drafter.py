@@ -1,11 +1,11 @@
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from revrecover.comms.drafter import MessageDrafter, lint
 from revrecover.domain.models import Case, CaseType
 from revrecover.policy.compliance import Channel
 
-NOW = datetime(2026, 8, 31, 12, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 8, 31, 12, 0, tzinfo=UTC)
 
 
 def make_case() -> Case:

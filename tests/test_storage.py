@@ -1,7 +1,5 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-
-import pytest
 
 from revrecover.audit.chain import AuditChain
 from revrecover.domain.models import Case, CaseState, CaseType
@@ -11,7 +9,7 @@ from revrecover.storage.sqlite import SqliteAuditChain, SqliteCaseStore
 from revrecover.workflows.flow import run_case
 
 POLICY_PATH = Path(__file__).parent.parent / "policy" / "compliance.yaml"
-NOW = datetime(2026, 8, 31, 12, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 8, 31, 12, 0, tzinfo=UTC)
 
 
 def test_hashes_match_the_in_memory_chain_exactly():

@@ -1,16 +1,16 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
 from revrecover.domain.models import (
+    TERMINAL_STATES,
     Case,
     CaseState,
     CaseType,
     IllegalTransition,
-    TERMINAL_STATES,
 )
 
-NOW = datetime(2026, 8, 31, 12, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 8, 31, 12, 0, tzinfo=UTC)
 
 
 def make_case() -> Case:
@@ -57,12 +57,12 @@ def test_no_transition_out_of_terminal_state():
 
 
 def test_terminal_states_are_exactly_the_four_end_states():
-    assert TERMINAL_STATES == {
+    assert {
         CaseState.RECOVERED,
         CaseState.PARTIALLY_RECOVERED,
         CaseState.ESCALATED,
         CaseState.ABANDONED,
-    }
+    } == TERMINAL_STATES
 
 
 def test_history_records_every_transition_with_timestamp_and_reason():

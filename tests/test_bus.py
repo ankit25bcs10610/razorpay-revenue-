@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -7,7 +7,7 @@ from revrecover.domain.models import Case, CaseType
 from revrecover.gateway.bus import InMemoryBus, case_from_payload, case_to_payload
 from revrecover.gateway.service import DemoIntake
 
-NOW = datetime(2026, 8, 31, 12, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 8, 31, 12, 0, tzinfo=UTC)
 
 
 def make_case(case_id="case_b1") -> Case:

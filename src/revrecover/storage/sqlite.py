@@ -151,7 +151,7 @@ class SqliteCaseStore:
             "case_id", "case_type", "customer_id", "amount_inr",
             "error_code", "state", "attempts", "detected_at",
         )
-        return dict(zip(keys, row))
+        return dict(zip(keys, row, strict=True))
 
     def count(self) -> int:
         return self._conn.execute("SELECT COUNT(*) FROM cases").fetchone()[0]

@@ -76,7 +76,7 @@ class ComplianceEngine:
     pre_debit_notice_hours: int
 
     @classmethod
-    def from_yaml(cls, path: Path | str) -> "ComplianceEngine":
+    def from_yaml(cls, path: Path | str) -> ComplianceEngine:
         raw = yaml.safe_load(Path(path).read_text())
         contact, payments, autonomy = raw["contact"], raw["payments"], raw["autonomy"]
         mandate = raw["mandate_retry"]
