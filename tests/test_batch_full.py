@@ -17,3 +17,10 @@ def test_run_batch_report_matches_full_run():
     assert run_batch(n=50, seed=42, policy_path=POLICY_PATH) == run_batch_full(
         n=50, seed=42, policy_path=POLICY_PATH
     ).report
+
+
+def test_batch_honors_a_tuned_pursue_floor():
+    strict = run_batch(n=30, seed=42, policy_path=POLICY_PATH, pursue_floor=0.9)
+    assert strict.recovered_inr == 0  # nothing clears a 0.9 floor
+    default = run_batch(n=30, seed=42, policy_path=POLICY_PATH)
+    assert default.recovered_inr > 0

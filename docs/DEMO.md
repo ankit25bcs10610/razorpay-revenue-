@@ -17,14 +17,17 @@ make demo
 ```
 
 Talk over the output:
-- ₹18.6L at risk across 400 seeded cases → **₹9.2L recovered (49.7%)
-  with learning on**, vs 43.3% static and two baselines (do-nothing,
+- First line: the pursue threshold was **tuned on a 100-case holdout,
+  never on this batch** — the headline can't tune itself.
+- ₹18.6L at risk across 400 seeded cases → **₹9.1L recovered (48.8%)
+  with learning on**, vs 42.1% static and two baselines (do-nothing,
   naive retry-everything). Our number is *incremental*, not gross.
-- Point at the **learning curve**: 43% → 52% → 61% across quartiles — the
+- Point at the **learning curve**: 43% → 52% → 54% across quartiles — the
   bandit discovers that business customers answer email, consumers answer
-  WhatsApp, and it earns +₹1.2L over the static default on the same seed.
+  WhatsApp, and it earns +₹1.25L over the static default on the same seed.
 - Point at the honesty lines: never-payers make 100% impossible;
-  **27 annoyance contacts** are reported as false-positive cost, not hidden.
+  **29 annoyance contacts** are reported as false-positive cost; stop
+  reasons account for every one of the 400 cases.
 - "Same seed, same report, on your machine — nothing here is cherry-picked."
 
 ## 1:40–2:40 — Live ingestion (terminal, two panes)
@@ -60,14 +63,17 @@ kill switch freezes everything. These aren't promises — they're tests."
   `test_verify_detects_tampered_payload` — edit one historical record, the
   chain breaks at that exact record. "A compliance officer can replay every
   decision, including the roads not taken."
+- `make failure-demo`: an issuer outage hits mid-retry — ACT_FAILED lands
+  in the audit chain, the agent backs off 24h, retries, recovers ₹4,999,
+  chain intact. Failure handling, demonstrated, not claimed.
 - `make dashboard` → open `dashboard.html`: KPI tiles, the learning curve,
-  and click open one case card — the full DETECT → DECIDE → ACT → OUTCOME
-  timeline with the compliance checks inline. This is the audit chain a
-  human actually reads.
+  and click open one case card — the full DETECT → PLAN (with rejected
+  alternatives and their EVs) → DECIDE → ACT → OUTCOME timeline with the
+  compliance checks inline. This is the audit chain a human actually reads.
 
 ## 4:30–5:00 — Close
 
-Built test-first (134 tests, deterministic, sub-second), designed to slot
+Built test-first (206 tests, deterministic, ~1s), designed to slot
 into production shape: the intake seam becomes Redis Streams, the flow loop
 becomes a Temporal workflow, the same clock-injected semantics throughout.
 One loop, fully closed, honestly measured — that's the pitch.

@@ -83,8 +83,12 @@ def run_batch(
     seed: int,
     policy_path: Path | str = DEFAULT_POLICY,
     learning: bool = False,
+    pursue_floor: float | None = None,
 ) -> BatchReport:
-    return run_batch_full(n=n, seed=seed, policy_path=policy_path, learning=learning).report
+    return run_batch_full(
+        n=n, seed=seed, policy_path=policy_path, learning=learning,
+        pursue_floor=pursue_floor,
+    ).report
 
 
 def run_batch_full(
@@ -93,6 +97,7 @@ def run_batch_full(
     seed: int,
     policy_path: Path | str = DEFAULT_POLICY,
     learning: bool = False,
+    pursue_floor: float | None = None,
 ) -> BatchRun:
     engine = ComplianceEngine.from_yaml(policy_path)
     scenarios = generate_scenarios(n=n, seed=seed)
@@ -105,7 +110,10 @@ def run_batch_full(
         if bandit is not None:
             arm = bandit.choose(scenario.segment)
             chooser = lambda case, chosen=Channel(arm): chosen
-        result = run_case(scenario, engine=engine, audit=audit, channel_chooser=chooser)
+        floor_kwargs = {} if pursue_floor is None else {"pursue_floor": pursue_floor}
+        result = run_case(
+            scenario, engine=engine, audit=audit, channel_chooser=chooser, **floor_kwargs
+        )
         if bandit is not None and any(
             a.kind is ActionKind.MESSAGE for a in result.actions_executed
         ):
@@ -180,12 +188,18 @@ def run_batch_full(
 
 
 def main() -> None:
-    static = run_batch(n=400, seed=2026)
-    learned = run_batch(n=400, seed=2026, learning=True)
+    from revrecover.evaluation.tuning import tune_pursue_floor
+
+    engine = ComplianceEngine.from_yaml(DEFAULT_POLICY)
+    tuned = tune_pursue_floor(seed=2026, engine=engine)
+    static = run_batch(n=400, seed=2026, pursue_floor=tuned.pursue_floor)
+    learned = run_batch(n=400, seed=2026, learning=True, pursue_floor=tuned.pursue_floor)
     curve = " → ".join(f"{q}%" for q in learned.learning_curve_pct)
     lines = [
         "RevRecover — measured batch run (seed=2026, n=400)",
         "=" * 56,
+        f"  Pursue floor {tuned.pursue_floor} — tuned on a {tuned.holdout_n}-case holdout "
+        f"(net ₹{tuned.holdout_net_inr:,}), never on this batch",
         f"  Revenue at risk          ₹{static.total_at_risk_inr:>12,}",
         f"  Recovered (static)       ₹{static.recovered_inr:>12,}  ({static.recovery_rate_pct}%)",
         f"  Recovered (learning)     ₹{learned.recovered_inr:>12,}  ({learned.recovery_rate_pct}%)",
