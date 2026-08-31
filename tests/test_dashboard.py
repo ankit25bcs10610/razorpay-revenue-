@@ -70,3 +70,7 @@ def test_output_is_self_contained_no_external_resources(rendered):
 def test_max_cases_cap_is_respected(rendered):
     assert rendered.count("<details") == 10
     assert "of 60 cases" in rendered
+
+
+def test_roi_estimate_tile_is_shown(rendered):
+    assert "per ₹1 Cr monthly GMV" in rendered

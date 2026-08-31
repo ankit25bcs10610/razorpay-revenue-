@@ -1,4 +1,4 @@
-.PHONY: test demo serve dashboard failure-demo sweep live-demo
+.PHONY: test demo serve dashboard failure-demo sweep live-demo voice-demo demo-llm
 
 test:
 	uv run pytest
@@ -20,3 +20,9 @@ sweep:
 
 live-demo:
 	uv run python -m revrecover.actuators.live_loop
+
+voice-demo:
+	uv run python -m revrecover.comms.voice_demo
+
+demo-llm:
+	uv run python -m revrecover.evaluation.llm_demo

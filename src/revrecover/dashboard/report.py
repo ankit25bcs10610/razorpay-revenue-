@@ -172,6 +172,11 @@ def render_dashboard(
             str(report.contacts_total),
             f"{report.annoyance_contacts} annoyance (false-positive cost)",
         ),
+        (
+            "Merchant ROI estimate",
+            _fmt_inr(int(10_000_000 * 0.10 * report.recovery_rate_pct / 100)) + "/mo",
+            "per ₹1 Cr monthly GMV at a typical 10% failure rate",
+        ),
     ]
     tiles_html = "".join(
         f'<div class="tile"><div class="label">{_esc(label)}</div>'

@@ -96,12 +96,23 @@ uv sync
 | `make demo` | The measured 400-case batch report above |
 | `make sweep` | Robustness sweep: static vs learning across 5 seeds × 400 cases |
 | `make failure-demo` | An issuer outage mid-retry, handled and recovered, printed from the audit chain |
-| `make dashboard` | Generates `dashboard.html` — KPI tiles, learning curve, every case's audit timeline |
-| `make serve` | Webhook gateway on `:8000` for Razorpay test-mode events |
+| `make dashboard` | Generates `dashboard.html` — KPI tiles, learning curve, ROI estimate, every case's audit timeline |
+| `make live-demo` | **One real rupee-cycle on real rails**: creates an actual test-mode Payment Link, you pay it with a test card, the agent detects the capture and closes the case (needs `RAZORPAY_KEY_ID`/`RAZORPAY_KEY_SECRET` test keys; refuses live keys) |
+| `make voice-demo` | A bounded Hinglish recovery call, printed as a transcript |
+| `make demo-llm` | Six cases with live Claude diagnosis, reasoning printed from the audit chain (needs `ANTHROPIC_API_KEY`) |
+| `make serve` | Full gateway on `:8000`: webhooks in, `POST /admin/process` drives the worker, `GET /dashboard` is a live auto-refreshing case view |
 
-Verify any persisted audit ledger from the command line:
-`uv run python -m revrecover.audit verify <audit.db>` — exit 0 if intact,
-exit 1 naming the exact broken record otherwise.
+Interrogate any persisted audit ledger from the command line:
+
+```bash
+uv run python -m revrecover.audit verify <audit.db>        # exit 0 intact / 1 + broken record
+uv run python -m revrecover.audit ask <audit.db> "why did case_pay_X get abandoned?"
+```
+
+**Ask the Ledger** answers in natural language strictly from the named
+case's records, citing record numbers; hallucinated citations or an API
+failure degrade to a deterministic timeline summary. The audit trail is
+not just tamper-evident — it's interrogatable.
 
 Containerized gateway: `docker compose -f infra/docker-compose.yml up gateway`.
 
@@ -147,7 +158,7 @@ generated code, not a drawing — regenerate it with
 | Layer | Module | Responsibility |
 |---|---|---|
 | Ingestion | `gateway/` | FastAPI webhook gateway (HMAC verification, dedupe), reconciliation poller (the API is the source of truth; webhooks are notifications), event bus with consumer-group semantics, and `RecoveryService` — the wired webhook → bus → worker pipeline sharing one SQLite audit chain, Customer-360, and daily budget |
-| Detection | `detection/` | Per-event recoverability scoring (hard failures are never pursued) and a dual-EWMA degradation monitor per method × issuer cell |
+| Detection | `detection/` | Per-event recoverability scoring (hard failures are never pursued) and a dual-EWMA degradation monitor per method × issuer cell whose alerts mark an OutageRegistry — the flow defers retries into a down issuer and resumes when the mark expires |
 | Diagnosis | `diagnosis/` | Claude structured-output diagnosis over a PII-free evidence pack; deterministic rule fallback on any failure |
 | Decision | `policy/` | Expected-value ranking of interventions, hard-filtered by policy-as-code compliance |
 | Execution | `workflows/` | Bounded playbooks behind a single action gate; blocked steps defer, failures back off, dry-run supported |
@@ -238,6 +249,9 @@ the harness is built first and frozen:
 - **Robustness sweep** — `make sweep` re-runs both batches across five
   seeds. The learning lift holds on *every* seed, not a lucky one:
   static mean 47.4% (42.6–52.7%) vs learning mean 50.8% (46.0–56.2%).
+- **Documented priors** — every simulator number is grounded and stated
+  in [docs/PRIORS.md](docs/PRIORS.md); the live test-mode loop
+  (`make live-demo`) shows the same machinery on real Razorpay rails.
 
 ## 9. The audit trail
 
